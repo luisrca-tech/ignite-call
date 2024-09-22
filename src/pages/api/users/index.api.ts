@@ -1,7 +1,6 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { prisma } from '@/lib/prisma'
-import { setCookie } from 'nookies'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { setCookie } from 'nookies'
+import { prisma } from '../../../lib/prisma'
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,7 +20,7 @@ export default async function handler(
 
   if (userExists) {
     return res.status(400).json({
-      message: 'User already exists',
+      message: 'Username already taken.',
     })
   }
 
