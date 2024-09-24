@@ -1,4 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
+import dayjs from 'dayjs'
+import { useRouter } from 'next/router'
 import { CaretLeft, CaretRight } from 'phosphor-react'
+import { useMemo, useState } from 'react'
+import { api } from '../../lib/axios'
+import { getWeekDays } from '../../utils/get-week-days'
 import {
   CalendarActions,
   CalendarBody,
@@ -7,12 +13,6 @@ import {
   CalendarHeader,
   CalendarTitle,
 } from './styles'
-import { getWeekDays } from '@/utils/get-week-days'
-import { useMemo, useState } from 'react'
-import dayjs from 'dayjs'
-import { useQuery } from '@tanstack/react-query'
-import { api } from '@/lib/axios'
-import { useRouter } from 'next/router'
 
 interface CalendarWeek {
   week: number
@@ -24,7 +24,7 @@ interface CalendarWeek {
 
 type CalendarWeeks = CalendarWeek[]
 
-interface blockedDates {
+interface BlockedDates {
   blockedWeekDays: number[]
   blockedDates: number[]
 }
@@ -34,7 +34,7 @@ interface CalendarProps {
   onDateSelected: (date: Date) => void
 }
 
-export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
+export function Calendar({ onDateSelected }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(() => {
     return dayjs().set('date', 1)
   })
@@ -42,15 +42,15 @@ export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
   const router = useRouter()
 
   function handlePreviousMonth() {
-    const previousMonthDate = currentDate.subtract(1, 'month')
+    const previousMonth = currentDate.subtract(1, 'month')
 
-    setCurrentDate(previousMonthDate)
+    setCurrentDate(previousMonth)
   }
 
   function handleNextMonth() {
-    const previousMonthDate = currentDate.add(1, 'month')
+    const nextMonth = currentDate.add(1, 'month')
 
-    setCurrentDate(previousMonthDate)
+    setCurrentDate(nextMonth)
   }
 
   const shortWeekDays = getWeekDays({ short: true })
@@ -60,19 +60,29 @@ export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
 
   const username = String(router.query.username)
 
-  const { data: blockedDates } = useQuery<blockedDates>(
-    ['blocked-dates', currentDate.get('year'), currentDate.get('month')],
-    async () => {
-      const response = await api.get(`/users/${username}/blocked-dates`, {
-        params: {
-          year: currentDate.get('year'),
-          month: currentDate.get('month') + 1,
+  const { data: blockedDates } = useQuery({
+    queryKey: [
+      'blocked-dates',
+      currentDate.get('year'),
+      currentDate.get('month'),
+    ],
+    queryFn: async () => {
+      const response = await api.get<BlockedDates>(
+        `/users/${username}/blocked-dates`,
+        {
+          params: {
+            year: currentDate.get('year'),
+            month:
+              currentDate.get('month') < 10
+                ? `0${currentDate.get('month') + 1}`
+                : currentDate.get('month') + 1,
+          },
         },
-      })
+      )
 
       return response.data
     },
-  )
+  })
 
   const calendarWeeks = useMemo(() => {
     if (!blockedDates) {
@@ -85,10 +95,10 @@ export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
       return currentDate.set('date', i + 1)
     })
 
-    const fristWeekDay = currentDate.get('day')
+    const firstWeekDay = currentDate.get('day')
 
     const previousMonthFillArray = Array.from({
-      length: fristWeekDay,
+      length: firstWeekDay,
     })
       .map((_, i) => {
         return currentDate.subtract(i + 1, 'day')
@@ -124,6 +134,7 @@ export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
         return { date, disabled: true }
       }),
     ]
+    console.log('calendarWeeks ~ blockedDates', blockedDates)
 
     const calendarWeeks = calendarDays.reduce<CalendarWeeks>(
       (weeks, _, i, original) => {
@@ -152,10 +163,10 @@ export function Calendar({ onDateSelected, selectedDate }: CalendarProps) {
         </CalendarTitle>
 
         <CalendarActions>
-          <button onClick={handlePreviousMonth} title="Previous Month">
+          <button onClick={handlePreviousMonth} title="Previous month">
             <CaretLeft />
           </button>
-          <button onClick={handleNextMonth} title="Next Month">
+          <button onClick={handleNextMonth} title="Next month">
             <CaretRight />
           </button>
         </CalendarActions>

@@ -3,15 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
+  relationMode = "prisma"
 }
 
 model User {
   id         String   @id @default(uuid())
   username   String   @unique
-  bio        String? @db.Text
   name       String
+  bio        String?  @db.Text
   email      String?  @unique
   avatar_url String?
   created_at DateTime @default(now())
@@ -41,16 +43,18 @@ model Account {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([provider, provider_account_id])
+  @@index([user_id])
   @@map("accounts")
 }
 
 model Session {
   id            String   @id @default(cuid())
-  session_token String   @unique @map("session_token")
-  user_id       String   @map("user_id")
+  session_token String   @unique
+  user_id       String
   expires       DateTime
   user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@index([user_id])
   @@map("sessions")
 }
 
@@ -78,5 +82,6 @@ model Scheduling {
   user    User   @relation(fields: [user_id], references: [id])
   user_id String
 
+  @@index([user_id])
   @@map("schedulings")
 }
